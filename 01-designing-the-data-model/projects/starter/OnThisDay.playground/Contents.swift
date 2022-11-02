@@ -33,49 +33,65 @@
 import Cocoa
 
 extension String {
-  // String extension to decode HTML entities
-  var decoded: String {
-    let attr = try? NSAttributedString(
-      data: Data(utf8),
-      options: [
-        .documentType: NSAttributedString.DocumentType.html,
-        .characterEncoding: String.Encoding.utf8.rawValue
-      ],
-      documentAttributes: nil)
-
-    return attr?.string ?? self
-  }
+    // String extension to decode HTML entities
+    var decoded: String {
+        let attr = try? NSAttributedString(
+            data: Data(utf8),
+            options: [
+                .documentType: NSAttributedString.DocumentType.html,
+                .characterEncoding: String.Encoding.utf8.rawValue
+            ],
+            documentAttributes: nil)
+        
+        return attr?.string ?? self
+    }
 }
 
 enum FetchError: Error {
-  case badURL
-  case badResponse
-  case badJSON
+    case badURL
+    case badResponse
+    case badJSON
 }
 
 func getDataForDay(month: Int, day: Int) async throws {
-  let address = "https://today.zenquotes.io/api/\(month)/\(day)"
-  guard let url = URL(string: address) else {
-    throw FetchError.badURL
-  }
-  let request = URLRequest(url: url)
-
-  let (data, response) = try await URLSession.shared.data(for: request)
-  guard
-    let response = response as? HTTPURLResponse,
-    response.statusCode < 400 else {
-      throw FetchError.badResponse
+    let address = "https://today.zenquotes.io/api/\(month)/\(day)"
+    guard let url = URL(string: address) else {
+        throw FetchError.badURL
     }
-
-  if let jsonString = String(data: data, encoding: .utf8) {
-    saveSampleData(json: jsonString)
-  }
+    
+    let request = URLRequest(url: url)
+    let (data, response) = try await URLSession.shared.data(for: request)
+    
+    guard
+        let response = response as? HTTPURLResponse,
+        response.statusCode < 400 else {
+        throw FetchError.badResponse
+    }
+    
+    if let jsonString = String(data: data, encoding: .utf8) {
+        saveSampleData(json: jsonString)
+    }
 }
 
-Task {
-  do {
-    try await getDataForDay(month: 2, day: 29)
-  } catch {
-    print(error)
-  }
+//Task {
+//  do {
+//    try await getDataForDay(month: 2, day: 29)
+//  } catch {
+//    print(error)
+//  }
+//}
+
+if let data = readSampleData() {
+    do {
+        let day = try JSONDecoder().decode(DaySample.self, from: data)
+        print(day.displayDate)
+        
+        print("Births: \(day.births.count)")
+        print("Deaths: \(day.deaths.count)")
+        print("Events: \(day.events.count)")
+        
+        print("Birth 0: \(day.births[0].links)")
+    } catch {
+        print(error)
+    }
 }
